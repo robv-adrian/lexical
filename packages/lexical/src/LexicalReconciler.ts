@@ -17,6 +17,7 @@ import type {NodeKey, NodeMap} from './LexicalNode';
 import type {ElementNode} from './nodes/LexicalElementNode';
 
 import invariant from 'shared/invariant';
+import { IS_IOS, IS_SAFARI } from '@lexical/utils';
 import normalizeClassNames from 'shared/normalizeClassNames';
 
 import {
@@ -236,7 +237,7 @@ function $createNode(
       parentDOM.insertBefore(dom, insertDOM);
     } else {
       // @ts-expect-error: internal field
-      const possibleLineBreak = parentDOM.__lexicalLineBreak;
+      const possibleLineBreak = parentDOM.__lexicalLineBreakImg || parentDOM.__lexicalLineBreak;
 
       if (possibleLineBreak != null) {
         parentDOM.insertBefore(dom, possibleLineBreak);
@@ -359,10 +360,32 @@ function reconcileElementTerminatingLineBreak(
     }
   } else if (nextLineBreak) {
     const element = document.createElement('br');
+
+    if (IS_SAFARI || IS_IOS) {
+      insertCursorFixElement(dom, element);
+    }
     // @ts-expect-error: internal field
     dom.__lexicalLineBreak = element;
     dom.appendChild(element);
   }
+}
+
+function insertCursorFixElement(
+  dom: HTMLElement,
+  lineBreakElement: HTMLBRElement,
+): void {
+  const element = document.createElement('img');
+  element.alt = '';
+
+  // prevent conflict with other css rules
+  const styles = element.style;
+  styles.setProperty('display', 'inline', 'important');
+  styles.setProperty('border', 'none', 'important');
+  styles.setProperty('margin', '0', 'important');
+
+  dom.appendChild(element);
+  // @ts-expect-error: internal field
+  dom.__lexicalLineBreakImg = element;
 }
 
 function reconcileParagraphFormat(element: ElementNode): void {
